@@ -1,4 +1,4 @@
-export type StatusPagamento = 'Ativo' | 'Pendente' | 'Inadimplente';
+export type StatusPagamento = 'Ativo' | 'Pendente' | 'Em Atraso';
 
 export interface Membro {
   id: string;

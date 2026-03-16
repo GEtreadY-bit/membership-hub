@@ -9,7 +9,7 @@ interface StatusBadgeProps {
 const statusConfig: Record<StatusPagamento, { label: string; className: string }> = {
   Ativo: { label: 'ATIVO', className: 'status-ativo' },
   Pendente: { label: 'PENDENTE', className: 'status-pendente' },
-  Inadimplente: { label: 'EM ATRASO', className: 'status-inadimplente' },
+  'Em Atraso': { label: 'EM ATRASO', className: 'status-inadimplente' },
 };
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {

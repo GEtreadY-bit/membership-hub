@@ -8,11 +8,11 @@ interface SearchFilterProps {
   onStatusFilterChange: (value: StatusPagamento | 'Todos') => void;
 }
 
-const statuses: (StatusPagamento | 'Todos')[] = ['Todos', 'Inadimplente', 'Pendente', 'Ativo'];
+const statuses: (StatusPagamento | 'Todos')[] = ['Todos', 'Em Atraso', 'Pendente', 'Ativo'];
 
 const statusLabels: Record<string, string> = {
   Todos: 'Todos',
-  Inadimplente: 'Em atraso',
+  'Em Atraso': 'Em atraso',
   Pendente: 'Pendente',
   Ativo: 'Ativo',
 };

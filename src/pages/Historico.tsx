@@ -38,7 +38,7 @@ export default function Historico() {
                     {new Date(h.data_pagamento).toLocaleDateString('pt-PT')}
                   </td>
                   <td className="px-5 py-3.5 text-sm text-foreground text-right tabular-nums font-medium">
-                    {h.valor.toFixed(2)}€
+                    {h.valor.toLocaleString('pt-AO')} Kz
                   </td>
                 </motion.tr>
               );

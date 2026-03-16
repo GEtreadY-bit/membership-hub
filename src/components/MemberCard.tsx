@@ -14,7 +14,7 @@ interface MemberCardProps {
 }
 
 const glowMap: Record<StatusPagamento, string> = {
-  Inadimplente: 'glow-danger',
+  'Em Atraso': 'glow-danger',
   Pendente: 'glow-warning',
   Ativo: '',
 };
@@ -79,7 +79,7 @@ export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, ind
 
       {/* Price */}
       <div className="flex items-baseline gap-1">
-        <span className="text-lg font-semibold text-foreground tabular-nums">{plano.preco.toFixed(2)}€</span>
+        <span className="text-lg font-semibold text-foreground tabular-nums">{plano.preco.toLocaleString('pt-AO')} Kz</span>
         <span className="text-xs text-muted-foreground">/{plano.frequencia}</span>
       </div>
 

@@ -7,7 +7,7 @@ interface StatsBarProps {
 export function StatsBar({ inscricoes }: StatsBarProps) {
   const ativos = inscricoes.filter(i => i.status === 'Ativo').length;
   const pendentes = inscricoes.filter(i => i.status === 'Pendente').length;
-  const inadimplentes = inscricoes.filter(i => i.status === 'Inadimplente').length;
+  const inadimplentes = inscricoes.filter(i => i.status === 'Em Atraso').length;
 
   const stats = [
     { label: 'Total', value: inscricoes.length, color: 'text-foreground' },
