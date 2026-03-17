@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getInscricoes, getMembros, getPlanos, updateInscricao, createHistorico } from '@/lib/api';
 import { StatsBar } from '@/components/StatsBar';
 import { SearchFilter } from '@/components/SearchFilter';
 import { MemberCard } from '@/components/MemberCard';
-import { mockMembros, mockInscricoes, mockPlanos } from '@/data/mock';
-import { StatusPagamento, Inscricao } from '@/types';
+import { StatusPagamento } from '@/types';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { toast } from 'sonner';
 
 const statusOrder: Record<StatusPagamento, number> = {
   'Em Atraso': 0,
@@ -14,7 +16,12 @@ const statusOrder: Record<StatusPagamento, number> = {
 };
 
 export default function Dashboard() {
-  const [inscricoes, setInscricoes] = useState<Inscricao[]>(mockInscricoes);
+  const queryClient = useQueryClient();
+
+  const { data: inscricoes = [], isLoading: isLoadingInscricoes } = useQuery({ queryKey: ['inscricoes'], queryFn: getInscricoes });
+  const { data: membros = [], isLoading: isLoadingMembros } = useQuery({ queryKey: ['membros'], queryFn: getMembros });
+  const { data: planos = [], isLoading: isLoadingPlanos } = useQuery({ queryKey: ['planos'], queryFn: getPlanos });
+
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusPagamento | 'Todos'>('Todos');
 
@@ -22,28 +29,28 @@ export default function Dashboard() {
     return inscricoes
       .filter(i => {
         if (statusFilter !== 'Todos' && i.status !== statusFilter) return false;
-        const membro = mockMembros.find(m => m.id === i.membro_id);
-        const plano = mockPlanos.find(p => p.id === i.plano_id);
+        const membro = membros.find(m => m.id === i.membro_id);
+        const plano = planos.find(p => p.id === i.plano_id);
         if (!membro || !plano) return false;
         const q = search.toLowerCase();
         return membro.nome.toLowerCase().includes(q) || plano.nome.toLowerCase().includes(q);
       })
       .sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
-  }, [inscricoes, search, statusFilter]);
+  }, [inscricoes, membros, planos, search, statusFilter]);
 
   const planosChartData = useMemo(() => {
-    return mockPlanos.map(plano => ({
+    return planos.map(plano => ({
       name: plano.nome,
       inscritos: inscricoes.filter(i => i.plano_id === plano.id).length,
     }));
-  }, [inscricoes]);
+  }, [planos, inscricoes]);
 
   const receitaChartData = useMemo(() => {
     const calcValor = (status: StatusPagamento) => {
       return inscricoes
         .filter(i => i.status === status)
         .reduce((acc, curr) => {
-          const plano = mockPlanos.find(p => p.id === curr.plano_id);
+          const plano = planos.find(p => p.id === curr.plano_id);
           return acc + (plano?.preco || 0);
         }, 0);
     };
@@ -53,7 +60,7 @@ export default function Dashboard() {
       { name: 'Pendente', valor: calcValor('Pendente'), fill: '#f59e0b' },
       { name: 'Em Atraso', valor: calcValor('Em Atraso'), fill: '#ef4444' },
     ];
-  }, [inscricoes]);
+  }, [inscricoes, planos]);
 
   const totalEsperado = useMemo(() => receitaChartData.reduce((acc, curr) => acc + curr.valor, 0), [receitaChartData]);
 
@@ -71,15 +78,31 @@ export default function Dashboard() {
     "Em Atraso": { label: "Em Atraso", color: "#ef4444" },
   } satisfies ChartConfig;
 
+  const paymentMutation = useMutation({
+    mutationFn: async ({ inscricaoId, valor, membroId }: { inscricaoId: string, valor: number, membroId: string }) => {
+      await updateInscricao(inscricaoId, { status: 'Ativo' });
+      await createHistorico({ membro_id: membroId, inscricao_id: inscricaoId, valor, data_pagamento: new Date().toISOString() });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inscricoes'] });
+      queryClient.invalidateQueries({ queryKey: ['historico'] });
+      toast.success('Pagamento confirmado e registado no histórico!');
+    },
+    onError: () => toast.error('Erro ao processar o pagamento.'),
+  });
+
   const handleConfirmarPagamento = (inscricaoId: string) => {
-    setInscricoes(prev =>
-      prev.map(i =>
-        i.id === inscricaoId
-          ? { ...i, status: 'Ativo' as StatusPagamento }
-          : i
-      )
-    );
+    const inscricao = inscricoes.find(i => i.id === inscricaoId);
+    if (!inscricao) return;
+    const plano = planos.find(p => p.id === inscricao.plano_id);
+    if (!plano) return;
+
+    paymentMutation.mutate({ inscricaoId, valor: plano.preco, membroId: inscricao.membro_id });
   };
+
+  if (isLoadingInscricoes || isLoadingMembros || isLoadingPlanos) {
+    return <div className="p-12 text-center text-muted-foreground">A carregar dashboard...</div>;
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -175,8 +198,8 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((inscricao, index) => {
-          const membro = mockMembros.find(m => m.id === inscricao.membro_id)!;
-          const plano = mockPlanos.find(p => p.id === inscricao.plano_id)!;
+          const membro = membros.find(m => m.id === inscricao.membro_id)!;
+          const plano = planos.find(p => p.id === inscricao.plano_id)!;
           return (
             <MemberCard
               key={inscricao.id}

@@ -1,10 +1,25 @@
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { mockHistorico, mockMembros } from '@/data/mock';
+import { getHistorico, getMembros } from '@/lib/api';
 
 export default function Historico() {
-  const historico = [...mockHistorico].sort(
-    (a, b) => new Date(b.data_pagamento).getTime() - new Date(a.data_pagamento).getTime()
-  );
+  const { data: historico = [], isLoading: loadingHistorico } = useQuery({
+    queryKey: ['historico'],
+    queryFn: getHistorico,
+  });
+
+  const { data: membros = [], isLoading: loadingMembros } = useQuery({
+    queryKey: ['membros'],
+    queryFn: getMembros,
+  });
+
+  if (loadingHistorico || loadingMembros) {
+    return (
+      <div className="flex items-center justify-center p-12 text-muted-foreground">
+        A carregar histórico...
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -23,26 +38,34 @@ export default function Historico() {
             </tr>
           </thead>
           <tbody>
-            {historico.map((h, i) => {
-              const membro = mockMembros.find(m => m.id === h.membro_id);
-              return (
-                <motion.tr
-                  key={h.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.03 }}
-                  className="border-b border-border/50 last:border-0"
-                >
-                  <td className="px-5 py-3.5 text-sm text-foreground">{membro?.nome ?? '—'}</td>
-                  <td className="px-5 py-3.5 text-sm text-muted-foreground tabular-nums">
-                    {new Date(h.data_pagamento).toLocaleDateString('pt-PT')}
-                  </td>
-                  <td className="px-5 py-3.5 text-sm text-foreground text-right tabular-nums font-medium">
-                    {h.valor.toLocaleString('pt-AO')} Kz
-                  </td>
-                </motion.tr>
-              );
-            })}
+            {historico.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="px-5 py-8 text-center text-sm text-muted-foreground">
+                  Nenhum pagamento registado ainda.
+                </td>
+              </tr>
+            ) : (
+              historico.map((h, i) => {
+                const membro = membros.find(m => m.id === h.membro_id);
+                return (
+                  <motion.tr
+                    key={h.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.03 }}
+                    className="border-b border-border/50 last:border-0"
+                  >
+                    <td className="px-5 py-3.5 text-sm text-foreground">{membro?.nome ?? 'Sem nome'}</td>
+                    <td className="px-5 py-3.5 text-sm text-muted-foreground tabular-nums">
+                      {new Date(h.data_pagamento).toLocaleDateString('pt-PT')}
+                    </td>
+                    <td className="px-5 py-3.5 text-sm text-foreground text-right tabular-nums font-medium">
+                      {h.valor.toLocaleString('pt-AO')} Kz
+                    </td>
+                  </motion.tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
