@@ -11,13 +11,26 @@ export const getPlanos = async (): Promise<Plano[]> => {
 };
 
 export const createPlano = async (plano: Omit<Plano, 'id' | 'created_at'>): Promise<Plano> => {
-  const { data, error } = await supabase.from('planos').insert([plano]).select().single();
+  const payload: Record<string, unknown> = {
+    nome: plano.nome,
+    preco: plano.preco,
+    frequencia: plano.frequencia,
+  };
+  if (plano.taxa_inscricao !== undefined && plano.taxa_inscricao > 0) {
+    payload.taxa_inscricao = plano.taxa_inscricao;
+  }
+  const { data, error } = await supabase.from('planos').insert([payload]).select().single();
   if (error) throw error;
   return data as Plano;
 };
 
 export const updatePlano = async (id: string, plano: Partial<Plano>): Promise<Plano> => {
-  const { data, error } = await supabase.from('planos').update(plano).eq('id', id).select().single();
+  const payload: Record<string, unknown> = {};
+  if (plano.nome !== undefined) payload.nome = plano.nome;
+  if (plano.preco !== undefined) payload.preco = plano.preco;
+  if (plano.frequencia !== undefined) payload.frequencia = plano.frequencia;
+  if (plano.taxa_inscricao !== undefined) payload.taxa_inscricao = plano.taxa_inscricao;
+  const { data, error } = await supabase.from('planos').update(payload).eq('id', id).select().single();
   if (error) throw error;
   return data as Plano;
 };
@@ -63,13 +76,29 @@ export const getInscricoes = async (): Promise<Inscricao[]> => {
 };
 
 export const createInscricao = async (inscricao: Omit<Inscricao, 'id' | 'created_at'>): Promise<Inscricao> => {
-  const { data, error } = await supabase.from('inscricoes').insert([inscricao]).select().single();
+  const payload: Record<string, unknown> = {
+    membro_id: inscricao.membro_id,
+    plano_id: inscricao.plano_id,
+    status: inscricao.status,
+    dia_vencimento: inscricao.dia_vencimento,
+    proximo_pagamento: inscricao.proximo_pagamento,
+  };
+  if (inscricao.taxa_inscricao_paga !== undefined) {
+    payload.taxa_inscricao_paga = inscricao.taxa_inscricao_paga;
+  }
+  const { data, error } = await supabase.from('inscricoes').insert([payload]).select().single();
   if (error) throw error;
   return data as Inscricao;
 };
 
 export const updateInscricao = async (id: string, inscricao: Partial<Inscricao>): Promise<Inscricao> => {
-  const { data, error } = await supabase.from('inscricoes').update(inscricao).eq('id', id).select().single();
+  const payload: Record<string, unknown> = {};
+  if (inscricao.status !== undefined) payload.status = inscricao.status;
+  if (inscricao.plano_id !== undefined) payload.plano_id = inscricao.plano_id;
+  if (inscricao.taxa_inscricao_paga !== undefined) payload.taxa_inscricao_paga = inscricao.taxa_inscricao_paga;
+  if (inscricao.dia_vencimento !== undefined) payload.dia_vencimento = inscricao.dia_vencimento;
+  if (inscricao.proximo_pagamento !== undefined) payload.proximo_pagamento = inscricao.proximo_pagamento;
+  const { data, error } = await supabase.from('inscricoes').update(payload).eq('id', id).select().single();
   if (error) throw error;
   return data as Inscricao;
 };
@@ -94,7 +123,14 @@ export const getHistorico = async (): Promise<HistoricoPagamento[]> => {
 };
 
 export const createHistorico = async (historico: Omit<HistoricoPagamento, 'id'>): Promise<HistoricoPagamento> => {
-  const { data, error } = await supabase.from('historico_pagamentos').insert([historico]).select().single();
+  const payload: Record<string, unknown> = {
+    membro_id: historico.membro_id,
+    valor: historico.valor,
+    data_pagamento: historico.data_pagamento,
+  };
+  if (historico.inscricao_id) payload.inscricao_id = historico.inscricao_id;
+  if (historico.tipo) payload.tipo = historico.tipo;
+  const { data, error } = await supabase.from('historico_pagamentos').insert([payload]).select().single();
   if (error) throw error;
   return data as HistoricoPagamento;
 };

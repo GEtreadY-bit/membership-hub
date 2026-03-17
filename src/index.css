@@ -94,6 +94,10 @@
     @apply bg-destructive/15 text-destructive border-destructive/30;
   }
 
+  .status-so-inscricao {
+    @apply bg-purple-500/15 text-purple-400 border-purple-500/30;
+  }
+
   .glow-success {
     box-shadow: 0 0 20px 0 hsl(var(--success) / 0.3);
   }

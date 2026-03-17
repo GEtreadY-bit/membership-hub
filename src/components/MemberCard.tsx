@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { User, Calendar } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { User, Calendar, ChevronDown } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 import { Membro, Inscricao, Plano, StatusPagamento } from '@/types';
 import { cn } from '@/lib/utils';
@@ -9,24 +9,42 @@ interface MemberCardProps {
   membro: Membro;
   inscricao: Inscricao;
   plano: Plano;
-  onConfirmarPagamento: (inscricaoId: string) => void;
+  onConfirmarPagamento: (inscricaoId: string, meses: number) => void;
+  onConfirmarInscricao?: (inscricaoId: string) => void;
   index: number;
 }
 
 const glowMap: Record<StatusPagamento, string> = {
   'Em Atraso': 'glow-danger',
   Pendente: 'glow-warning',
+  'Só Inscrição': 'glow-warning',
   Ativo: '',
 };
 
-export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, index }: MemberCardProps) {
+const MESES_OPCOES = [1, 2, 3, 6, 12];
+
+export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, onConfirmarInscricao, index }: MemberCardProps) {
   const [confirming, setConfirming] = useState(false);
+  const [confirmingInscricao, setConfirmingInscricao] = useState(false);
+  const [mesesSelecionados, setMesesSelecionados] = useState(1);
+  const [showMesesPicker, setShowMesesPicker] = useState(false);
 
   const handleConfirm = () => {
     setConfirming(true);
+    setShowMesesPicker(false);
     setTimeout(() => {
-      onConfirmarPagamento(inscricao.id);
+      onConfirmarPagamento(inscricao.id, mesesSelecionados);
       setConfirming(false);
+      setMesesSelecionados(1);
+    }, 600);
+  };
+
+  const handleConfirmInscricao = () => {
+    if (!onConfirmarInscricao) return;
+    setConfirmingInscricao(true);
+    setTimeout(() => {
+      onConfirmarInscricao(inscricao.id);
+      setConfirmingInscricao(false);
     }, 600);
   };
 
@@ -34,6 +52,12 @@ export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, ind
     day: '2-digit',
     month: 'short',
   });
+
+  const mostrarBotaoInscricao =
+    (plano.taxa_inscricao ?? 0) > 0 && !inscricao.taxa_inscricao_paga;
+
+  const mostrarBotaoMensalidade = inscricao.status !== 'Ativo' || showMesesPicker;
+  const totalMeses = mesesSelecionados * plano.preco;
 
   return (
     <motion.div
@@ -43,8 +67,8 @@ export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, ind
       whileTap={{ scale: 0.98 }}
       className={cn(
         'glass-surface p-6 flex flex-col gap-4 transition-shadow duration-300',
-        confirming && 'glow-success',
-        !confirming && glowMap[inscricao.status]
+        (confirming || confirmingInscricao) && 'glow-success',
+        !(confirming || confirmingInscricao) && glowMap[inscricao.status]
       )}
     >
       {/* Header */}
@@ -78,21 +102,133 @@ export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, ind
       </div>
 
       {/* Price */}
-      <div className="flex items-baseline gap-1">
-        <span className="text-lg font-semibold text-foreground tabular-nums">{plano.preco.toLocaleString('pt-AO')} Kz</span>
+      <div className="flex items-baseline gap-1 flex-wrap">
+        <span className="text-lg font-semibold text-foreground tabular-nums">
+          {plano.preco.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Kz
+        </span>
         <span className="text-xs text-muted-foreground">/{plano.frequencia}</span>
+        {(plano.taxa_inscricao ?? 0) > 0 && (
+          <span className="text-xs text-muted-foreground ml-1">
+            {inscricao.taxa_inscricao_paga
+              ? '· inscrição paga ✓'
+              : `· + ${plano.taxa_inscricao.toLocaleString('pt-AO')} Kz inscrição`}
+          </span>
+        )}
       </div>
 
-      {/* Action */}
-      {inscricao.status !== 'Ativo' && (
-        <button
-          onClick={handleConfirm}
-          disabled={confirming}
-          className="w-full py-2.5 rounded-xl text-sm font-medium bg-foreground/5 hover:bg-foreground/10 border border-border transition-colors disabled:opacity-50"
-        >
-          {confirming ? 'A confirmar...' : 'Confirmar Recebimento'}
-        </button>
-      )}
+      {/* Actions */}
+      <div className="flex flex-col gap-2">
+        {/* Botão inscrição */}
+        {mostrarBotaoInscricao && (
+          <button
+            onClick={handleConfirmInscricao}
+            disabled={confirmingInscricao}
+            className="w-full py-2.5 rounded-xl text-sm font-medium bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 transition-colors disabled:opacity-50"
+          >
+            {confirmingInscricao
+              ? 'A confirmar...'
+              : `Confirmar Inscrição (${plano.taxa_inscricao!.toLocaleString('pt-AO')} Kz)`}
+          </button>
+        )}
+
+        {/* Botão mensalidade + seletor de meses */}
+        {inscricao.status !== 'Ativo' && (
+          <div className="flex flex-col gap-1.5">
+            {/* Seletor de meses */}
+            <div className="flex items-center gap-1.5">
+              {MESES_OPCOES.map(m => (
+                <button
+                  key={m}
+                  onClick={() => setMesesSelecionados(m)}
+                  className={cn(
+                    'flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors border',
+                    mesesSelecionados === m
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-card/40 text-muted-foreground border-border hover:text-foreground'
+                  )}
+                >
+                  {m === 1 ? '1 mês' : m === 12 ? '1 ano' : `${m}m`}
+                </button>
+              ))}
+            </div>
+
+            {/* Total */}
+            {mesesSelecionados > 1 && (
+              <p className="text-xs text-muted-foreground text-center tabular-nums">
+                Total: <span className="text-foreground font-medium">{totalMeses.toLocaleString('pt-AO')} Kz</span>
+              </p>
+            )}
+
+            <button
+              onClick={handleConfirm}
+              disabled={confirming}
+              className="w-full py-2.5 rounded-xl text-sm font-medium bg-foreground/5 hover:bg-foreground/10 border border-border transition-colors disabled:opacity-50"
+            >
+              {confirming
+                ? 'A confirmar...'
+                : mesesSelecionados === 1
+                  ? 'Confirmar Mensalidade'
+                  : `Confirmar ${mesesSelecionados} Meses (${totalMeses.toLocaleString('pt-AO')} Kz)`}
+            </button>
+          </div>
+        )}
+
+        {/* Membro Ativo - botão para pagar adiantado */}
+        {inscricao.status === 'Ativo' && (
+          <div className="flex flex-col gap-1.5">
+            <button
+              onClick={() => setShowMesesPicker(v => !v)}
+              className="w-full py-2 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground border border-border/50 hover:border-border bg-transparent flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', showMesesPicker && 'rotate-180')} />
+              Pagar meses adiantado
+            </button>
+            <AnimatePresence>
+              {showMesesPicker && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden flex flex-col gap-1.5"
+                >
+                  <div className="flex items-center gap-1.5">
+                    {MESES_OPCOES.map(m => (
+                      <button
+                        key={m}
+                        onClick={() => setMesesSelecionados(m)}
+                        className={cn(
+                          'flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors border',
+                          mesesSelecionados === m
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-card/40 text-muted-foreground border-border hover:text-foreground'
+                        )}
+                      >
+                        {m === 1 ? '1 mês' : m === 12 ? '1 ano' : `${m}m`}
+                      </button>
+                    ))}
+                  </div>
+                  {mesesSelecionados > 1 && (
+                    <p className="text-xs text-muted-foreground text-center tabular-nums">
+                      Total: <span className="text-foreground font-medium">{totalMeses.toLocaleString('pt-AO')} Kz</span>
+                    </p>
+                  )}
+                  <button
+                    onClick={handleConfirm}
+                    disabled={confirming}
+                    className="w-full py-2.5 rounded-xl text-sm font-medium bg-foreground/5 hover:bg-foreground/10 border border-border transition-colors disabled:opacity-50"
+                  >
+                    {confirming
+                      ? 'A confirmar...'
+                      : mesesSelecionados === 1
+                        ? 'Confirmar 1 Mês'
+                        : `Confirmar ${mesesSelecionados} Meses (${totalMeses.toLocaleString('pt-AO')} Kz)`}
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 }

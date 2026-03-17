@@ -40,6 +40,7 @@ export default function Planos() {
   const [editingPlano, setEditingPlano] = useState<Plano | null>(null);
   const [nome, setNome] = useState('');
   const [preco, setPreco] = useState('');
+  const [taxaInscricao, setTaxaInscricao] = useState('');
   
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [viewingPlanId, setViewingPlanId] = useState<string | null>(null);
@@ -60,6 +61,7 @@ export default function Planos() {
       setEditingPlano(null);
       setNome('');
       setPreco('');
+      setTaxaInscricao('');
     }
   };
 
@@ -96,24 +98,29 @@ export default function Planos() {
     },
   });
 
+  const parsePrice = (val: string): number => {
+    let clean = val.toString();
+    if (clean.includes(',')) {
+      clean = clean.replace(/\./g, '').replace(',', '.');
+    }
+    return parseFloat(clean) || 0;
+  };
+
   const handleSave = () => {
     if (!nome.trim() || !preco) return;
-    
-    let cleanPrice = preco.toString();
-    if (cleanPrice.includes(',')) {
-      cleanPrice = cleanPrice.replace(/\./g, '').replace(',', '.');
-    }
-    const finalPrice = parseFloat(cleanPrice);
 
-    if (isNaN(finalPrice)) {
+    const finalPrice = parsePrice(preco);
+    if (isNaN(finalPrice) || finalPrice <= 0) {
       toast.error('Introduza um preço válido.');
       return;
     }
 
+    const finalTaxa = taxaInscricao ? parsePrice(taxaInscricao) : 0;
+
     if (editingPlano) {
-      updateMutation.mutate({ id: editingPlano.id, plano: { nome: nome.trim(), preco: finalPrice } });
+      updateMutation.mutate({ id: editingPlano.id, plano: { nome: nome.trim(), preco: finalPrice, taxa_inscricao: finalTaxa } });
     } else {
-      createMutation.mutate({ nome: nome.trim(), preco: finalPrice, frequencia: 'mensal' });
+      createMutation.mutate({ nome: nome.trim(), preco: finalPrice, frequencia: 'mensal', taxa_inscricao: finalTaxa });
     }
   };
 
@@ -121,6 +128,9 @@ export default function Planos() {
     setEditingPlano(plano);
     setNome(plano.nome);
     setPreco(plano.preco.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    setTaxaInscricao(plano.taxa_inscricao && plano.taxa_inscricao > 0
+      ? plano.taxa_inscricao.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : '');
     setOpen(true);
   };
 
@@ -170,9 +180,22 @@ export default function Planos() {
                   const val = e.target.value.replace(/[^0-9.,]/g, '');
                   setPreco(val);
                 }}
-                placeholder="Preço (Kz)"
+                placeholder="Mensalidade (Kz)"
                 className="w-full bg-card/40 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground pl-1">Taxa de Inscrição (opcional)</label>
+                <input
+                  type="text"
+                  value={taxaInscricao}
+                  onChange={e => {
+                    const val = e.target.value.replace(/[^0-9.,]/g, '');
+                    setTaxaInscricao(val);
+                  }}
+                  placeholder="0 Kz (deixar vazio se não aplicar)"
+                  className="w-full bg-card/40 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                />
+              </div>
               <button
                 onClick={handleSave}
                 disabled={createMutation.isPending || updateMutation.isPending}
@@ -243,6 +266,11 @@ export default function Planos() {
                 <p className="text-xl font-semibold tabular-nums text-foreground whitespace-nowrap">
                   {plano.preco.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-sm text-muted-foreground font-medium">Kz</span>
                 </p>
+                {(plano.taxa_inscricao ?? 0) > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    + {plano.taxa_inscricao!.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Kz de inscrição
+                  </p>
+                )}
               </div>
             </motion.div>
           ))}

@@ -33,6 +33,7 @@ export default function Historico() {
           <thead>
             <tr className="border-b border-border">
               <th className="text-left text-[11px] uppercase tracking-wider text-muted-foreground font-medium px-5 py-3">Membro</th>
+              <th className="text-left text-[11px] uppercase tracking-wider text-muted-foreground font-medium px-5 py-3">Tipo</th>
               <th className="text-left text-[11px] uppercase tracking-wider text-muted-foreground font-medium px-5 py-3">Data</th>
               <th className="text-right text-[11px] uppercase tracking-wider text-muted-foreground font-medium px-5 py-3">Valor</th>
             </tr>
@@ -56,6 +57,15 @@ export default function Historico() {
                     className="border-b border-border/50 last:border-0"
                   >
                     <td className="px-5 py-3.5 text-sm text-foreground">{membro?.nome ?? 'Sem nome'}</td>
+                    <td className="px-5 py-3.5">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        h.tipo === 'Inscrição'
+                          ? 'bg-purple-500/15 text-purple-400'
+                          : 'bg-primary/10 text-primary'
+                      }`}>
+                        {h.tipo ?? 'Mensalidade'}
+                      </span>
+                    </td>
                     <td className="px-5 py-3.5 text-sm text-muted-foreground tabular-nums">
                       {new Date(h.data_pagamento).toLocaleDateString('pt-PT')}
                     </td>

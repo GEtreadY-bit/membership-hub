@@ -1,4 +1,4 @@
-export type StatusPagamento = 'Ativo' | 'Pendente' | 'Em Atraso';
+export type StatusPagamento = 'Ativo' | 'Pendente' | 'Em Atraso' | 'Só Inscrição';
 
 export interface Membro {
   id: string;
@@ -14,6 +14,7 @@ export interface Plano {
   nome: string;
   preco: number;
   frequencia: string;
+  taxa_inscricao?: number;
 }
 
 export interface Inscricao {
@@ -23,6 +24,7 @@ export interface Inscricao {
   status: StatusPagamento;
   dia_vencimento: number;
   proximo_pagamento: string;
+  taxa_inscricao_paga?: boolean;
   // joined
   membro?: Membro;
   plano?: Plano;
@@ -31,7 +33,9 @@ export interface Inscricao {
 export interface HistoricoPagamento {
   id: string;
   membro_id: string;
+  inscricao_id?: string;
   valor: number;
+  tipo?: string; 
   data_pagamento: string;
 }
 
