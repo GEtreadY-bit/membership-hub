@@ -22,9 +22,11 @@ export default function Historico() {
     const q = search.toLowerCase();
     return historico.filter(h => {
       const membro = membros.find(m => m.id === h.membro_id);
+      const shortId = membro?.id.split('-')[0].toLowerCase() || '';
       return (
         membro?.nome.toLowerCase().includes(q) ||
-        h.tipo?.toLowerCase().includes(q)
+        h.tipo?.toLowerCase().includes(q) ||
+        shortId.includes(q)
       );
     });
   }, [historico, membros, search]);
@@ -56,7 +58,7 @@ export default function Historico() {
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Pesquisar por membro ou tipo de pagamento..."
+            placeholder="Pesquisar por membro, ID ou tipo..."
             className="w-full bg-card/40 border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 backdrop-blur-lg transition-all"
           />
         </div>
@@ -109,7 +111,10 @@ export default function Historico() {
                           <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary transition-colors">
                             {membro?.nome?.charAt(0).toUpperCase() ?? '?'}
                           </div>
-                          <span className="text-sm font-medium text-foreground">{membro?.nome ?? 'Membro Removido'}</span>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-foreground">{membro?.nome ?? 'Membro Removido'}</span>
+                            {membro && <span className="text-[10px] text-muted-foreground font-mono uppercase bg-muted/50 px-1.5 py-0.5 rounded-md w-fit mt-0.5">#{membro.id.split('-')[0]}</span>}
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">

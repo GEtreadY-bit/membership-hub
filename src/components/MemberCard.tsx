@@ -85,7 +85,10 @@ export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, onC
               <User className="w-4 h-4 text-muted-foreground" />
             )}
           </div>
-          <h3 className="text-sm font-semibold text-foreground">{membro.nome}</h3>
+          <div className="flex flex-col">
+            <h3 className="text-sm font-semibold text-foreground leading-tight">{membro.nome}</h3>
+            <span className="text-[10px] text-muted-foreground uppercase font-mono mt-0.5">#{membro.id.split('-')[0]}</span>
+          </div>
         </div>
         <StatusBadge status={confirming ? 'Ativo' : getRealStatus(inscricao)} />
       </div>

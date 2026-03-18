@@ -223,7 +223,8 @@ export default function Membros() {
         const plano = planos.find(p => p.id === i.plano_id);
         if (!membro || !plano) return false;
         const q = search.toLowerCase();
-        return membro.nome.toLowerCase().includes(q) || plano.nome.toLowerCase().includes(q);
+        const shortId = membro.id.split('-')[0].toLowerCase();
+        return membro.nome.toLowerCase().includes(q) || plano.nome.toLowerCase().includes(q) || shortId.includes(q);
       })
       .sort((a, b) => statusOrder[getRealStatus(a)] - statusOrder[getRealStatus(b)]);
   }, [inscricoes, membros, planos, search, statusFilter]);
@@ -232,11 +233,13 @@ export default function Membros() {
   const filteredMembros = useMemo(() => {
     if (!search) return membros;
     const q = search.toLowerCase();
-    return membros.filter(m =>
-      m.nome.toLowerCase().includes(q) ||
+    return membros.filter(m => {
+      const shortId = m.id.split('-')[0].toLowerCase();
+      return m.nome.toLowerCase().includes(q) ||
       m.email?.toLowerCase().includes(q) ||
-      m.telefone?.toLowerCase().includes(q)
-    );
+      m.telefone?.toLowerCase().includes(q) ||
+      shortId.includes(q);
+    });
   }, [membros, search]);
 
   const statuses: (StatusPagamento | 'Todos')[] = ['Todos', 'Em Atraso', 'Pendente', 'Ativo'];
@@ -316,7 +319,7 @@ export default function Membros() {
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder={viewMode === 'cartoes' ? 'Pesquisar membro ou plano...' : 'Pesquisar membro...'}
+            placeholder={viewMode === 'cartoes' ? 'Pesquisar membro, ID ou plano...' : 'Pesquisar membro ou ID...'}
             className="w-full bg-card/40 border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 backdrop-blur-lg"
           />
         </div>
@@ -391,8 +394,13 @@ export default function Membros() {
                       <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center shrink-0">
                         <span className="text-sm font-medium text-foreground">{membro.nome.charAt(0).toUpperCase()}</span>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{membro.nome}</p>
+                      <div className="min-w-0 flex flex-col justify-center">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-foreground truncate">{membro.nome}</p>
+                          <span className="text-[10px] text-muted-foreground font-mono bg-muted/50 px-1.5 py-0.5 rounded-md">
+                            #{membro.id.split('-')[0].toUpperCase()}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-3 mt-0.5">
                           {membro.email && <span className="text-xs text-muted-foreground truncate">{membro.email}</span>}
                           {membro.telefone && <span className="text-xs text-muted-foreground">{membro.telefone}</span>}
