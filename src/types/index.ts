@@ -15,6 +15,7 @@ export interface Plano {
   preco: number;
   frequencia: string;
   taxa_inscricao?: number;
+  multa_atraso?: number;
 }
 
 export interface Inscricao {

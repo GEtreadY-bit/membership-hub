@@ -1,8 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
 
 @layer base {
   :root {
@@ -44,7 +44,7 @@
 
     --sidebar-background: 222 47% 5%;
     --sidebar-foreground: 215 16% 57%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary: 217 91% 100%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 215 25% 12%;
     --sidebar-accent-foreground: 210 40% 92%;
@@ -58,11 +58,14 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
 
@@ -74,28 +77,44 @@
 
 @layer utilities {
   .glass-surface {
-    @apply bg-card/60 backdrop-blur-xl border border-border rounded-2xl;
+    background-color: hsla(var(--card) / 0.6);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid hsla(var(--border));
+    border-radius: var(--radius);
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
   }
 
   .glass-surface-inner {
-    @apply bg-card/40 backdrop-blur-lg border border-border rounded-xl;
+    background-color: hsla(var(--card) / 0.4);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid hsla(var(--border));
+    border-radius: 0.75rem;
   }
 
   .status-ativo {
-    @apply bg-success/15 text-success border-success/30;
+    background-color: hsla(var(--success) / 0.15);
+    color: hsl(var(--success));
+    border: 1px solid hsla(var(--success) / 0.3);
   }
 
   .status-pendente {
-    @apply bg-warning/15 text-warning border-warning/30;
+    background-color: hsla(var(--warning) / 0.15);
+    color: hsl(var(--warning));
+    border: 1px solid hsla(var(--warning) / 0.3);
   }
 
   .status-inadimplente {
-    @apply bg-destructive/15 text-destructive border-destructive/30;
+    background-color: hsla(var(--destructive) / 0.15);
+    color: hsl(var(--destructive));
+    border: 1px solid hsla(var(--destructive) / 0.3);
   }
 
   .status-so-inscricao {
-    @apply bg-purple-500/15 text-purple-400 border-purple-500/30;
+    background-color: rgba(168, 85, 247, 0.15);
+    color: #a855f7;
+    border: 1px solid rgba(168, 85, 247, 0.3);
   }
 
   .glow-success {

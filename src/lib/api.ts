@@ -19,6 +19,9 @@ export const createPlano = async (plano: Omit<Plano, 'id' | 'created_at'>): Prom
   if (plano.taxa_inscricao !== undefined && plano.taxa_inscricao > 0) {
     payload.taxa_inscricao = plano.taxa_inscricao;
   }
+  if (plano.multa_atraso !== undefined && plano.multa_atraso > 0) {
+    payload.multa_atraso = plano.multa_atraso;
+  }
   const { data, error } = await supabase.from('planos').insert([payload]).select().single();
   if (error) throw error;
   return data as Plano;
@@ -30,6 +33,7 @@ export const updatePlano = async (id: string, plano: Partial<Plano>): Promise<Pl
   if (plano.preco !== undefined) payload.preco = plano.preco;
   if (plano.frequencia !== undefined) payload.frequencia = plano.frequencia;
   if (plano.taxa_inscricao !== undefined) payload.taxa_inscricao = plano.taxa_inscricao;
+  if (plano.multa_atraso !== undefined) payload.multa_atraso = plano.multa_atraso;
   const { data, error } = await supabase.from('planos').update(payload).eq('id', id).select().single();
   if (error) throw error;
   return data as Plano;

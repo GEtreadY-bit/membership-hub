@@ -1,14 +1,20 @@
 import { useMemo } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell, ResponsiveContainer } from "recharts";
 import { useQuery } from '@tanstack/react-query';
-import { getInscricoes, getMembros, getPlanos } from '@/lib/api';
+import { getInscricoes, getMembros, getPlanos, getHistorico } from '@/lib/api';
 import { StatsBar } from '@/components/StatsBar';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Link } from 'react-router-dom';
+import { Clock, Plus } from 'lucide-react';
+import { getRealStatus } from '@/lib/utils';
 
 export default function Dashboard() {
   const { data: inscricoes = [], isLoading: loadingInscricoes } = useQuery({ queryKey: ['inscricoes'], queryFn: getInscricoes });
   const { data: membros = [], isLoading: loadingMembros } = useQuery({ queryKey: ['membros'], queryFn: getMembros });
   const { data: planos = [], isLoading: loadingPlanos } = useQuery({ queryKey: ['planos'], queryFn: getPlanos });
+  const { data: historico = [], isLoading: loadingHistorico } = useQuery({ queryKey: ['historico'], queryFn: getHistorico });
+
+  const ultimasAtividades = useMemo(() => historico.slice(0, 5), [historico]);
 
   const planosChartData = useMemo(() => {
     return planos.map(plano => ({
@@ -20,7 +26,7 @@ export default function Dashboard() {
   const receitaChartData = useMemo(() => {
     const calcValor = (status: string) => {
       return inscricoes
-        .filter(i => i.status === status)
+        .filter(i => getRealStatus(i) === status)
         .reduce((acc, curr) => {
           const plano = planos.find(p => p.id === curr.plano_id);
           return acc + (plano?.preco || 0);
@@ -128,20 +134,67 @@ export default function Dashboard() {
       </div>
 
       {/* Resumo rápido */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="glass-surface-inner p-4">
-          <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Total Membros</p>
-          <p className="text-2xl font-semibold tabular-nums">{membros.length}</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* KPIs */}
+        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="glass-surface-inner p-4">
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Total Membros</p>
+            <p className="text-2xl font-semibold tabular-nums">{membros.length}</p>
+          </div>
+          <div className="glass-surface-inner p-4">
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Planos Ativos</p>
+            <p className="text-2xl font-semibold tabular-nums">{planos.length}</p>
+          </div>
+          <div className="glass-surface-inner p-4">
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Receita Confirmada</p>
+            <p className="text-2xl font-semibold tabular-nums text-success">
+              {receitaChartData.find(d => d.name === 'Faturado')?.valor.toLocaleString('pt-AO') ?? 0} Kz
+            </p>
+          </div>
+
+          <div className="sm:col-span-3 glass-surface-inner p-5 flex flex-col gap-4">
+             <div className="flex justify-between items-center">
+               <div className="flex items-center gap-2">
+                 <Clock className="w-4 h-4 text-primary" />
+                 <h2 className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">Últimas Atividades</h2>
+               </div>
+               <Link to="/historico" className="text-[11px] font-medium text-primary hover:underline">Ver tudo</Link>
+             </div>
+             <div className="space-y-3">
+               {ultimasAtividades.length === 0 ? (
+                 <p className="text-sm text-muted-foreground text-center py-4">Sem atividade recente.</p>
+               ) : (
+                 ultimasAtividades.map((h, i) => {
+                   const membro = membros.find(m => m.id === h.membro_id);
+                   return (
+                     <div key={h.id} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
+                       <div className="min-w-0">
+                         <p className="text-sm font-medium text-foreground truncate">{membro?.nome ?? 'Membro'}</p>
+                         <p className="text-[10px] text-muted-foreground">{h.tipo || 'Mensalidade'} · {new Date(h.data_pagamento).toLocaleDateString()}</p>
+                       </div>
+                       <p className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
+                         +{h.valor.toLocaleString('pt-AO')} Kz
+                       </p>
+                     </div>
+                   );
+                 })
+               )}
+             </div>
+          </div>
         </div>
-        <div className="glass-surface-inner p-4">
-          <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Planos Ativos</p>
-          <p className="text-2xl font-semibold tabular-nums">{planos.length}</p>
-        </div>
-        <div className="glass-surface-inner p-4">
-          <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Receita Confirmada</p>
-          <p className="text-2xl font-semibold tabular-nums text-success">
-            {receitaChartData.find(d => d.name === 'Faturado')?.valor.toLocaleString('pt-AO') ?? 0} Kz
-          </p>
+
+        {/* Tip: Upgrade logic or Quick Stats here if needed */}
+        <div className="glass-surface-inner p-6 flex flex-col items-center justify-center text-center gap-4 bg-primary/5">
+           <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center">
+              <Plus className="w-6 h-6 text-primary" />
+           </div>
+           <div>
+             <h3 className="text-sm font-bold text-foreground">Novo Registo</h3>
+             <p className="text-xs text-muted-foreground mt-1 px-4">Adicione rapidamente um novo membro à plataforma.</p>
+           </div>
+           <Link to="/membros" className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-all">
+             Ir para Membros
+           </Link>
         </div>
       </div>
     </div>

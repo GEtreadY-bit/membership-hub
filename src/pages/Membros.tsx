@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMembros, createMembro, updateMembro, deleteMembro, getInscricoes, createInscricao, updateInscricao, deleteInscricao, getPlanos, createHistorico } from '@/lib/api';
 import { MemberCard } from '@/components/MemberCard';
 import { StatusPagamento, Membro } from '@/types';
+import { getRealStatus } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -139,15 +140,19 @@ export default function Membros() {
   });
 
   const paymentMutation = useMutation({
-    mutationFn: async ({ inscricaoId, valor, membroId, meses, proximoPagamento }: {
-      inscricaoId: string; valor: number; membroId: string; meses: number; proximoPagamento: string;
+    mutationFn: async ({ inscricaoId, valor, membroId, meses, proximoPagamento, temMulta }: {
+      inscricaoId: string; valor: number; membroId: string; meses: number; proximoPagamento: string; temMulta?: boolean;
     }) => {
       await updateInscricao(inscricaoId, { status: 'Ativo', proximo_pagamento: proximoPagamento });
+
+      let tipoTexto = meses > 1 ? `Mensalidade (${meses}x)` : 'Mensalidade';
+      if (temMulta) tipoTexto += ' + Multa';
+
       await createHistorico({
         membro_id: membroId,
         inscricao_id: inscricaoId,
         valor,
-        tipo: meses > 1 ? `Mensalidade (${meses}x)` : 'Mensalidade',
+        tipo: tipoTexto,
         data_pagamento: new Date().toISOString()
       });
     },
@@ -185,14 +190,19 @@ export default function Membros() {
     setOpen(true);
   };
 
-  const handleConfirmarPagamento = (inscricaoId: string, meses: number = 1) => {
+  const handleConfirmarPagamento = (inscricaoId: string, meses: number = 1, temMulta: boolean = false) => {
     const inscricao = inscricoes.find(i => i.id === inscricaoId);
     if (!inscricao) return;
     const plano = planos.find(p => p.id === inscricao.plano_id);
     if (!plano) return;
+    
     const proximoBase = new Date(inscricao.proximo_pagamento);
     proximoBase.setMonth(proximoBase.getMonth() + meses);
-    paymentMutation.mutate({ inscricaoId, valor: plano.preco * meses, membroId: inscricao.membro_id, meses, proximoPagamento: proximoBase.toISOString() });
+    
+    const multa = temMulta ? (plano.multa_atraso ?? 0) : 0;
+    const valorFinanceiro = (plano.preco * meses) + multa;
+
+    paymentMutation.mutate({ inscricaoId, valor: valorFinanceiro, membroId: inscricao.membro_id, meses, proximoPagamento: proximoBase.toISOString(), temMulta });
   };
 
   const handleConfirmarInscricao = (inscricaoId: string) => {
@@ -207,14 +217,15 @@ export default function Membros() {
   const filteredInscricoes = useMemo(() => {
     return inscricoes
       .filter(i => {
-        if (statusFilter !== 'Todos' && i.status !== statusFilter) return false;
+        const realStatus = getRealStatus(i);
+        if (statusFilter !== 'Todos' && realStatus !== statusFilter) return false;
         const membro = membros.find(m => m.id === i.membro_id);
         const plano = planos.find(p => p.id === i.plano_id);
         if (!membro || !plano) return false;
         const q = search.toLowerCase();
         return membro.nome.toLowerCase().includes(q) || plano.nome.toLowerCase().includes(q);
       })
-      .sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+      .sort((a, b) => statusOrder[getRealStatus(a)] - statusOrder[getRealStatus(b)]);
   }, [inscricoes, membros, planos, search, statusFilter]);
 
   // --- Filtered membros for list view ---
@@ -325,7 +336,10 @@ export default function Membros() {
       {viewMode === 'cartoes' && (
         <>
           {filteredInscricoes.length === 0 ? (
-            <div className="glass-surface-inner p-12 text-center">
+            <div className="glass-surface-inner p-12 text-center flex flex-col items-center gap-4">
+              <div className="w-48 h-48 opacity-40">
+                <img src="/empty_members_illustration.png" alt="Sem membros" className="w-full h-full object-contain" />
+              </div>
               <p className="text-muted-foreground">
                 {inscricoes.length === 0 ? 'Nenhum membro com plano ativo.' : 'Nenhum resultado encontrado.'}
               </p>
@@ -390,10 +404,10 @@ export default function Membros() {
                       {plano && <span className="text-xs text-muted-foreground hidden md:inline">{plano.nome}</span>}
                       {inscricao ? (
                         <span className={`text-[10px] font-bold px-2 py-1 rounded-md border uppercase tracking-widest ${
-                          inscricao.status === 'Ativo' ? 'bg-success/15 text-success border-success/30' :
-                          inscricao.status === 'Em Atraso' ? 'bg-destructive/15 text-destructive border-destructive/30' :
+                          getRealStatus(inscricao) === 'Ativo' ? 'bg-success/15 text-success border-success/30' :
+                          getRealStatus(inscricao) === 'Em Atraso' ? 'bg-destructive/15 text-destructive border-destructive/30' :
                           'bg-warning/15 text-warning border-warning/30'
-                        }`}>{inscricao.status}</span>
+                        }`}>{getRealStatus(inscricao)}</span>
                       ) : (
                         <span className="text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full">Sem plano</span>
                       )}

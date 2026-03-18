@@ -41,6 +41,7 @@ export default function Planos() {
   const [nome, setNome] = useState('');
   const [preco, setPreco] = useState('');
   const [taxaInscricao, setTaxaInscricao] = useState('');
+  const [multaAtraso, setMultaAtraso] = useState('');
   
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [viewingPlanId, setViewingPlanId] = useState<string | null>(null);
@@ -62,6 +63,7 @@ export default function Planos() {
       setNome('');
       setPreco('');
       setTaxaInscricao('');
+      setMultaAtraso('');
     }
   };
 
@@ -116,11 +118,12 @@ export default function Planos() {
     }
 
     const finalTaxa = taxaInscricao ? parsePrice(taxaInscricao) : 0;
+    const finalMulta = multaAtraso ? parsePrice(multaAtraso) : 0;
 
     if (editingPlano) {
-      updateMutation.mutate({ id: editingPlano.id, plano: { nome: nome.trim(), preco: finalPrice, taxa_inscricao: finalTaxa } });
+      updateMutation.mutate({ id: editingPlano.id, plano: { nome: nome.trim(), preco: finalPrice, taxa_inscricao: finalTaxa, multa_atraso: finalMulta } });
     } else {
-      createMutation.mutate({ nome: nome.trim(), preco: finalPrice, frequencia: 'mensal', taxa_inscricao: finalTaxa });
+      createMutation.mutate({ nome: nome.trim(), preco: finalPrice, frequencia: 'mensal', taxa_inscricao: finalTaxa, multa_atraso: finalMulta });
     }
   };
 
@@ -130,6 +133,9 @@ export default function Planos() {
     setPreco(plano.preco.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     setTaxaInscricao(plano.taxa_inscricao && plano.taxa_inscricao > 0
       ? plano.taxa_inscricao.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : '');
+    setMultaAtraso(plano.multa_atraso && plano.multa_atraso > 0
+      ? plano.multa_atraso.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       : '');
     setOpen(true);
   };
@@ -183,18 +189,33 @@ export default function Planos() {
                 placeholder="Mensalidade (Kz)"
                 className="w-full bg-card/40 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground pl-1">Taxa de Inscrição (opcional)</label>
-                <input
-                  type="text"
-                  value={taxaInscricao}
-                  onChange={e => {
-                    const val = e.target.value.replace(/[^0-9.,]/g, '');
-                    setTaxaInscricao(val);
-                  }}
-                  placeholder="0 Kz (deixar vazio se não aplicar)"
-                  className="w-full bg-card/40 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground pl-1">Taxa de Inscrição</label>
+                  <input
+                    type="text"
+                    value={taxaInscricao}
+                    onChange={e => {
+                      const val = e.target.value.replace(/[^0-9.,]/g, '');
+                      setTaxaInscricao(val);
+                    }}
+                    placeholder="Opcional (0 Kz)"
+                    className="w-full bg-card/40 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground pl-1">Multa de Atraso</label>
+                  <input
+                    type="text"
+                    value={multaAtraso}
+                    onChange={e => {
+                      const val = e.target.value.replace(/[^0-9.,]/g, '');
+                      setMultaAtraso(val);
+                    }}
+                    placeholder="Opcional (0 Kz)"
+                    className="w-full bg-card/40 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  />
+                </div>
               </div>
               <button
                 onClick={handleSave}
@@ -266,10 +287,19 @@ export default function Planos() {
                 <p className="text-xl font-semibold tabular-nums text-foreground whitespace-nowrap">
                   {plano.preco.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-sm text-muted-foreground font-medium">Kz</span>
                 </p>
-                {(plano.taxa_inscricao ?? 0) > 0 && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    + {plano.taxa_inscricao!.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Kz de inscrição
-                  </p>
+                {((plano.taxa_inscricao ?? 0) > 0 || (plano.multa_atraso ?? 0) > 0) && (
+                  <div className="mt-1 space-y-0.5">
+                    {(plano.taxa_inscricao ?? 0) > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        + {plano.taxa_inscricao!.toLocaleString('pt-AO')} Kz (inscrição)
+                      </p>
+                    )}
+                    {(plano.multa_atraso ?? 0) > 0 && (
+                      <p className="text-[11px] text-destructive/80 font-medium tracking-wide">
+                        + {plano.multa_atraso!.toLocaleString('pt-AO')} Kz /multa
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </motion.div>

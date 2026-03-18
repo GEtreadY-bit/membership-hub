@@ -3,13 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { User, Calendar, ChevronDown } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 import { Membro, Inscricao, Plano, StatusPagamento } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, getRealStatus } from '@/lib/utils';
 
 interface MemberCardProps {
   membro: Membro;
   inscricao: Inscricao;
   plano: Plano;
-  onConfirmarPagamento: (inscricaoId: string, meses: number) => void;
+  onConfirmarPagamento: (inscricaoId: string, meses: number, temMulta: boolean) => void;
   onConfirmarInscricao?: (inscricaoId: string) => void;
   index: number;
 }
@@ -33,7 +33,7 @@ export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, onC
     setConfirming(true);
     setShowMesesPicker(false);
     setTimeout(() => {
-      onConfirmarPagamento(inscricao.id, mesesSelecionados);
+      onConfirmarPagamento(inscricao.id, mesesSelecionados, isLate && multaAtraso > 0);
       setConfirming(false);
       setMesesSelecionados(1);
     }, 600);
@@ -49,15 +49,19 @@ export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, onC
   };
 
   const proximaData = new Date(inscricao.proximo_pagamento).toLocaleDateString('pt-PT', {
-    day: '2-digit',
     month: 'short',
+    year: 'numeric'
   });
+  
+  const proximaDataFormatada = proximaData.charAt(0).toUpperCase() + proximaData.slice(1).replace(' de ', '/');
+  const mostrarBotaoInscricao = (plano.taxa_inscricao ?? 0) > 0 && !inscricao.taxa_inscricao_paga;
 
-  const mostrarBotaoInscricao =
-    (plano.taxa_inscricao ?? 0) > 0 && !inscricao.taxa_inscricao_paga;
+  const isLate = getRealStatus(inscricao) === 'Em Atraso';
+  const multaAtraso = plano.multa_atraso ?? 0;
+  const temMulta = isLate && multaAtraso > 0;
 
   const mostrarBotaoMensalidade = inscricao.status !== 'Ativo' || showMesesPicker;
-  const totalMeses = mesesSelecionados * plano.preco;
+  const totalMeses = (mesesSelecionados * plano.preco) + (temMulta ? multaAtraso : 0);
 
   return (
     <motion.div
@@ -68,7 +72,7 @@ export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, onC
       className={cn(
         'glass-surface p-6 flex flex-col gap-4 transition-shadow duration-300',
         (confirming || confirmingInscricao) && 'glow-success',
-        !(confirming || confirmingInscricao) && glowMap[inscricao.status]
+        !(confirming || confirmingInscricao) && glowMap[getRealStatus(inscricao)]
       )}
     >
       {/* Header */}
@@ -83,7 +87,7 @@ export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, onC
           </div>
           <h3 className="text-sm font-semibold text-foreground">{membro.nome}</h3>
         </div>
-        <StatusBadge status={confirming ? 'Ativo' : inscricao.status} />
+        <StatusBadge status={confirming ? 'Ativo' : getRealStatus(inscricao)} />
       </div>
 
       {/* Body */}
@@ -96,7 +100,7 @@ export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, onC
           <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-0.5">Próximo</p>
           <div className="flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-            <p className="text-sm text-foreground tabular-nums">{proximaData}</p>
+            <p className="text-sm font-medium text-foreground capitalize">{proximaDataFormatada}</p>
           </div>
         </div>
       </div>
@@ -153,22 +157,28 @@ export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, onC
             </div>
 
             {/* Total */}
-            {mesesSelecionados > 1 && (
-              <p className="text-xs text-muted-foreground text-center tabular-nums">
-                Total: <span className="text-foreground font-medium">{totalMeses.toLocaleString('pt-AO')} Kz</span>
-              </p>
+            {(mesesSelecionados > 1 || temMulta) && (
+              <div className="text-xs text-muted-foreground text-center tabular-nums space-y-0.5 mt-1 mb-1">
+                {temMulta && <p className="text-destructive/80 font-medium">+ Multa de Atraso: {multaAtraso.toLocaleString('pt-AO')} Kz</p>}
+                <p>
+                  Total: <span className="text-foreground font-medium">{totalMeses.toLocaleString('pt-AO')} Kz</span>
+                </p>
+              </div>
             )}
 
             <button
               onClick={handleConfirm}
               disabled={confirming}
-              className="w-full py-2.5 rounded-xl text-sm font-medium bg-foreground/5 hover:bg-foreground/10 border border-border transition-colors disabled:opacity-50"
+              className={cn(
+                "w-full py-2.5 rounded-xl text-sm font-semibold transition-all shadow-md disabled:opacity-50",
+                temMulta ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-destructive/20" : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20"
+              )}
             >
               {confirming
                 ? 'A confirmar...'
-                : mesesSelecionados === 1
-                  ? 'Confirmar Mensalidade'
-                  : `Confirmar ${mesesSelecionados} Meses (${totalMeses.toLocaleString('pt-AO')} Kz)`}
+                : temMulta 
+                  ? `Pagar + Multa (${totalMeses.toLocaleString('pt-AO')} Kz)`
+                  : `Confirmar ${mesesSelecionados} M${mesesSelecionados > 1 ? 'eses' : 'ês'} (${totalMeses.toLocaleString('pt-AO')} Kz)`}
             </button>
           </div>
         )}

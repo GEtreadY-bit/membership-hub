@@ -1,13 +1,14 @@
 import { Inscricao } from '@/types';
+import { getRealStatus } from '@/lib/utils';
 
 interface StatsBarProps {
   inscricoes: Inscricao[];
 }
 
 export function StatsBar({ inscricoes }: StatsBarProps) {
-  const ativos = inscricoes.filter(i => i.status === 'Ativo').length;
-  const pendentes = inscricoes.filter(i => i.status === 'Pendente').length;
-  const inadimplentes = inscricoes.filter(i => i.status === 'Em Atraso').length;
+  const ativos = inscricoes.filter(i => getRealStatus(i) === 'Ativo').length;
+  const pendentes = inscricoes.filter(i => getRealStatus(i) === 'Pendente').length;
+  const inadimplentes = inscricoes.filter(i => getRealStatus(i) === 'Em Atraso').length;
 
   const stats = [
     { label: 'Total', value: inscricoes.length, color: 'text-foreground' },
