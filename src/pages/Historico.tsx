@@ -112,9 +112,9 @@ export default function Historico() {
                             {membro?.nome?.charAt(0).toUpperCase() ?? '?'}
                           </div>
                           <div className="flex flex-col">
-                            <span className="text-sm font-medium text-foreground">{membro?.nome ?? 'Membro Removido'}</span>
-                            {membro && <span className="text-[10px] text-muted-foreground font-mono uppercase bg-muted/50 px-1.5 py-0.5 rounded-md w-fit mt-0.5">#{membro.id.split('-')[0]}</span>}
-                          </div>
+                            <span className="text-sm font-medium text-foreground leading-tight">{membro?.nome ?? 'Membro Removido'}</span>
+                          {membro && <span className="text-[10px] text-muted-foreground font-mono uppercase bg-muted/50 px-1.5 py-0.5 rounded-md w-fit mt-0.5">#{membro.id.substring(0, 5)}</span>}
+                        </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">

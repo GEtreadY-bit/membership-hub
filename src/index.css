@@ -6,6 +6,58 @@
 
 @layer base {
   :root {
+    /* LIGHT MODE */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221 83% 53%;
+
+    --radius: 1rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --surface: 0 0% 100%;
+    --glass: 0 0% 100% / 0.8;
+  }
+
+  .dark {
+    /* DARK MODE (Original variables) */
     --background: 222 47% 3%;
     --foreground: 210 40% 92%;
 
@@ -82,6 +134,10 @@
     -webkit-backdrop-filter: blur(24px);
     border: 1px solid hsla(var(--border));
     border-radius: var(--radius);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .dark .glass-surface {
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
   }
 
@@ -105,6 +161,12 @@
     border: 1px solid hsla(var(--warning) / 0.3);
   }
 
+  .status-a-vencer {
+    background-color: rgba(249, 115, 22, 0.15);
+    color: #f97316;
+    border: 1px solid rgba(249, 115, 22, 0.3);
+  }
+
   .status-inadimplente {
     background-color: hsla(var(--destructive) / 0.15);
     color: hsl(var(--destructive));
@@ -123,6 +185,10 @@
 
   .glow-warning {
     box-shadow: 0 0 20px 0 hsl(var(--warning) / 0.3);
+  }
+
+  .glow-a-vencer {
+    box-shadow: 0 0 20px 0 rgba(249, 115, 22, 0.3);
   }
 
   .glow-danger {

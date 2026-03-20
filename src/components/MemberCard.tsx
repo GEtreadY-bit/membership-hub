@@ -16,6 +16,7 @@ interface MemberCardProps {
 
 const glowMap: Record<StatusPagamento, string> = {
   'Em Atraso': 'glow-danger',
+  'A Vencer': 'glow-a-vencer',
   Pendente: 'glow-warning',
   'Só Inscrição': 'glow-warning',
   Ativo: '',
@@ -87,7 +88,7 @@ export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, onC
           </div>
           <div className="flex flex-col">
             <h3 className="text-sm font-semibold text-foreground leading-tight">{membro.nome}</h3>
-            <span className="text-[10px] text-muted-foreground uppercase font-mono mt-0.5">#{membro.id.split('-')[0]}</span>
+            <span className="text-[10px] text-muted-foreground uppercase font-mono mt-0.5">#{membro.id.substring(0, 5)}</span>
           </div>
         </div>
         <StatusBadge status={confirming ? 'Ativo' : getRealStatus(inscricao)} />

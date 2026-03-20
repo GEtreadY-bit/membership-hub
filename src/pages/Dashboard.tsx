@@ -35,6 +35,7 @@ export default function Dashboard() {
     return [
       { name: 'Faturado', valor: calcValor('Ativo'), fill: '#10b981' },
       { name: 'Pendente', valor: calcValor('Pendente'), fill: '#f59e0b' },
+      { name: 'A Vencer', valor: calcValor('A Vencer'), fill: '#f97316' },
       { name: 'Em Atraso', valor: calcValor('Em Atraso'), fill: '#ef4444' },
     ];
   }, [inscricoes, planos]);
@@ -49,6 +50,7 @@ export default function Dashboard() {
     valor: { label: "Valor (Kz)" },
     Faturado: { label: "Faturado", color: "#10b981" },
     Pendente: { label: "Pendente", color: "#f59e0b" },
+    "A Vencer": { label: "A Vencer", color: "#f97316" },
     "Em Atraso": { label: "Em Atraso", color: "#ef4444" },
   } satisfies ChartConfig;
 

@@ -8,26 +8,31 @@ import Membros from "./pages/Membros";
 import Planos from "./pages/Planos";
 import Historico from "./pages/Historico";
 import NotFound from "./pages/NotFound";
+import Definicoes from "./pages/Definicoes";
+import { SettingsProvider } from "./contexts/SettingsContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Sonner />
-      <BrowserRouter>
-        <AppLayout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/membros" element={<Membros />} />
-            <Route path="/planos" element={<Planos />} />
-            <Route path="/historico" element={<Historico />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AppLayout>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <SettingsProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Sonner />
+        <BrowserRouter>
+          <AppLayout>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/membros" element={<Membros />} />
+              <Route path="/planos" element={<Planos />} />
+              <Route path="/historico" element={<Historico />} />
+              <Route path="/definicoes" element={<Definicoes />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AppLayout>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </SettingsProvider>
 );
 
 export default App;

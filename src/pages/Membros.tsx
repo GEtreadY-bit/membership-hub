@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, MoreVertical, Pencil, Trash2, Search } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSettings } from '@/contexts/SettingsContext';
 import { getMembros, createMembro, updateMembro, deleteMembro, getInscricoes, createInscricao, updateInscricao, deleteInscricao, getPlanos, createHistorico } from '@/lib/api';
 import { MemberCard } from '@/components/MemberCard';
 import { StatusPagamento, Membro } from '@/types';
@@ -35,13 +36,15 @@ type ViewMode = 'lista' | 'cartoes';
 
 const statusOrder: Record<StatusPagamento, number> = {
   'Em Atraso': 0,
-  'Só Inscrição': 1,
-  Pendente: 2,
-  Ativo: 3,
+  'A Vencer': 1,
+  'Só Inscrição': 2,
+  Pendente: 3,
+  Ativo: 4,
 };
 
 export default function Membros() {
   const queryClient = useQueryClient();
+  const { billingMode } = useSettings();
 
   const { data: membros = [], isLoading: loadingMembros } = useQuery({ queryKey: ['membros'], queryFn: getMembros });
   const { data: inscricoes = [], isLoading: loadingInscricoes } = useQuery({ queryKey: ['inscricoes'], queryFn: getInscricoes });
@@ -197,7 +200,13 @@ export default function Membros() {
     if (!plano) return;
     
     const proximoBase = new Date(inscricao.proximo_pagamento);
-    proximoBase.setMonth(proximoBase.getMonth() + meses);
+    
+    if (billingMode === 'first_of_month') {
+      proximoBase.setMonth(proximoBase.getMonth() + meses);
+      proximoBase.setDate(1);
+    } else {
+      proximoBase.setMonth(proximoBase.getMonth() + meses);
+    }
     
     const multa = temMulta ? (plano.multa_atraso ?? 0) : 0;
     const valorFinanceiro = (plano.preco * meses) + multa;
@@ -242,7 +251,7 @@ export default function Membros() {
     });
   }, [membros, search]);
 
-  const statuses: (StatusPagamento | 'Todos')[] = ['Todos', 'Em Atraso', 'Pendente', 'Ativo'];
+  const statuses: (StatusPagamento | 'Todos')[] = ['Todos', 'Em Atraso', 'A Vencer', 'Pendente', 'Ativo'];
 
   if (loadingMembros || loadingInscricoes || loadingPlanos) {
     return <div className="p-12 text-center text-muted-foreground">A carregar membros...</div>;
@@ -397,8 +406,8 @@ export default function Membros() {
                       <div className="min-w-0 flex flex-col justify-center">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-foreground truncate">{membro.nome}</p>
-                          <span className="text-[10px] text-muted-foreground font-mono bg-muted/50 px-1.5 py-0.5 rounded-md">
-                            #{membro.id.split('-')[0].toUpperCase()}
+                          <span className="text-[10px] text-muted-foreground font-mono bg-muted/50 px-1.5 py-0.5 rounded-md uppercase">
+                            #{membro.id.substring(0, 5)}
                           </span>
                         </div>
                         <div className="flex items-center gap-3 mt-0.5">
@@ -414,6 +423,7 @@ export default function Membros() {
                         <span className={`text-[10px] font-bold px-2 py-1 rounded-md border uppercase tracking-widest ${
                           getRealStatus(inscricao) === 'Ativo' ? 'bg-success/15 text-success border-success/30' :
                           getRealStatus(inscricao) === 'Em Atraso' ? 'bg-destructive/15 text-destructive border-destructive/30' :
+                          getRealStatus(inscricao) === 'A Vencer' ? 'bg-orange-500/15 text-orange-500 border-orange-500/30' :
                           'bg-warning/15 text-warning border-warning/30'
                         }`}>{getRealStatus(inscricao)}</span>
                       ) : (

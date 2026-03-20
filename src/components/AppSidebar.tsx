@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, CreditCard, History } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, History, Settings } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import {
@@ -17,6 +17,7 @@ const items = [
   { title: 'Membros', url: '/membros', icon: Users },
   { title: 'Planos', url: '/planos', icon: CreditCard },
   { title: 'Histórico', url: '/historico', icon: History },
+  { title: 'Definições', url: '/definicoes', icon: Settings },
 ];
 
 export function AppSidebar() {
