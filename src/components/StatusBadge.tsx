@@ -11,6 +11,7 @@ const statusConfig: Record<StatusPagamento, { label: string; className: string }
   Pendente: { label: 'PENDENTE', className: 'status-pendente' },
   'Em Atraso': { label: 'EM ATRASO', className: 'status-inadimplente' },
   'Só Inscrição': { label: 'SÓ INSCRIÇÃO', className: 'status-so-inscricao' },
+  'A Vencer': { label: 'A VENCER', className: 'status-a-vencer' },
 };
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {

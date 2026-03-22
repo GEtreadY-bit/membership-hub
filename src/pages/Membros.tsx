@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, MoreVertical, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, MoreVertical, Pencil, Trash2, Search, ExternalLink } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSettings } from '@/contexts/SettingsContext';
-import { getMembros, createMembro, updateMembro, deleteMembro, getInscricoes, createInscricao, updateInscricao, deleteInscricao, getPlanos, createHistorico } from '@/lib/api';
+import { getMembros, createMembro, updateMembro, deleteMembro, getInscricoes, createInscricao, updateInscricao, deleteInscricao, getPlanos, createHistorico, getHistorico } from '@/lib/api';
 import { MemberCard } from '@/components/MemberCard';
+import { MemberDetailPanel } from '@/components/MemberDetailPanel';
 import { StatusPagamento, Membro } from '@/types';
 import { getRealStatus } from '@/lib/utils';
 import {
@@ -49,6 +50,7 @@ export default function Membros() {
   const { data: membros = [], isLoading: loadingMembros } = useQuery({ queryKey: ['membros'], queryFn: getMembros });
   const { data: inscricoes = [], isLoading: loadingInscricoes } = useQuery({ queryKey: ['inscricoes'], queryFn: getInscricoes });
   const { data: planos = [], isLoading: loadingPlanos } = useQuery({ queryKey: ['planos'], queryFn: getPlanos });
+  const { data: historico = [] } = useQuery({ queryKey: ['historico'], queryFn: getHistorico });
 
   const [open, setOpen] = useState(false);
   const [editingMembro, setEditingMembro] = useState<Membro | null>(null);
@@ -57,6 +59,36 @@ export default function Membros() {
   const [telefone, setTelefone] = useState('');
   const [planoId, setPlanoId] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [detailMembroId, setDetailMembroId] = useState<string | null>(null);
+
+  // --- Validation errors ---
+  const [errors, setErrors] = useState<{ nome?: string; email?: string; telefone?: string }>({});
+
+  const validateForm = (): boolean => {
+    const newErrors: typeof errors = {};
+    const trimmedNome = nome.trim();
+    if (!trimmedNome) {
+      newErrors.nome = 'O nome é obrigatório.';
+    } else if (trimmedNome.length < 2) {
+      newErrors.nome = 'O nome deve ter pelo menos 2 caracteres.';
+    } else if (trimmedNome.length > 100) {
+      newErrors.nome = 'O nome não pode exceder 100 caracteres.';
+    }
+    if (email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        newErrors.email = 'Introduz um endereço de email válido.';
+      }
+    }
+    if (telefone.trim()) {
+      const telRegex = /^[+\d][\d\s\-().]{6,19}$/;
+      if (!telRegex.test(telefone.trim())) {
+        newErrors.telefone = 'Número de telefone inválido.';
+      }
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusPagamento | 'Todos'>('Todos');
@@ -70,6 +102,7 @@ export default function Membros() {
       setEmail('');
       setTelefone('');
       setPlanoId('');
+      setErrors({});
     }
   };
 
@@ -82,8 +115,15 @@ export default function Membros() {
       toast.success('Membro eliminado com sucesso!');
       setDeleteId(null);
     },
-    onError: () => {
-      toast.error('Erro ao eliminar membro.');
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('foreign key') || msg.includes('23503')) {
+        toast.error('Não é possível eliminar: o membro tem histórico de pagamentos associado.');
+      } else if (msg.includes('network') || msg.includes('fetch')) {
+        toast.error('Erro de ligação. Verifica a tua internet e tenta de novo.');
+      } else {
+        toast.error('Erro ao eliminar membro. Tenta novamente.');
+      }
       setDeleteId(null);
     }
   });
@@ -139,7 +179,16 @@ export default function Membros() {
       toast.success(editingMembro ? 'Membro atualizado!' : 'Membro registado!');
       handleOpenChange(false);
     },
-    onError: () => toast.error('Ocorreu um erro ao guardar os dados do membro.')
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('duplicate') || msg.includes('23505')) {
+        toast.error('Já existe um membro com estes dados. Verifica o email ou telefone.');
+      } else if (msg.includes('network') || msg.includes('fetch')) {
+        toast.error('Erro de ligação. Verifica a tua internet e tenta de novo.');
+      } else {
+        toast.error('Erro ao guardar os dados. Tenta novamente.');
+      }
+    }
   });
 
   const paymentMutation = useMutation({
@@ -181,7 +230,7 @@ export default function Membros() {
   });
 
   // --- Handlers ---
-  const handleSave = () => { if (!nome.trim()) return; saveMutation.mutate(); };
+  const handleSave = () => { if (!validateForm()) return; saveMutation.mutate(); };
 
   const handleEdit = (membro: Membro) => {
     setEditingMembro(membro);
@@ -293,13 +342,40 @@ export default function Membros() {
               <DialogHeader>
                 <DialogTitle>{editingMembro ? 'Editar Membro' : 'Adicionar Membro'}</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 mt-4">
-                <input value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome completo (obrigatório)"
-                  className="w-full bg-card/40 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
-                <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email (opcional)"
-                  className="w-full bg-card/40 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
-                <input value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="Telefone (opcional)"
-                  className="w-full bg-card/40 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50" />
+              <div className="space-y-3 mt-4">
+                <div className="space-y-1">
+                  <input
+                    value={nome}
+                    onChange={e => { setNome(e.target.value); if (errors.nome) setErrors(p => ({ ...p, nome: undefined })); }}
+                    placeholder="Nome completo (obrigatório)"
+                    className={`w-full bg-card/40 border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors ${
+                      errors.nome ? 'border-destructive focus:ring-destructive/50' : 'border-border focus:ring-primary/50'
+                    }`}
+                  />
+                  {errors.nome && <p className="text-xs text-destructive pl-1 flex items-center gap-1"><span>⚠</span>{errors.nome}</p>}
+                </div>
+                <div className="space-y-1">
+                  <input
+                    value={email}
+                    onChange={e => { setEmail(e.target.value); if (errors.email) setErrors(p => ({ ...p, email: undefined })); }}
+                    placeholder="Email (opcional)"
+                    className={`w-full bg-card/40 border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors ${
+                      errors.email ? 'border-destructive focus:ring-destructive/50' : 'border-border focus:ring-primary/50'
+                    }`}
+                  />
+                  {errors.email && <p className="text-xs text-destructive pl-1 flex items-center gap-1"><span>⚠</span>{errors.email}</p>}
+                </div>
+                <div className="space-y-1">
+                  <input
+                    value={telefone}
+                    onChange={e => { setTelefone(e.target.value); if (errors.telefone) setErrors(p => ({ ...p, telefone: undefined })); }}
+                    placeholder="Telefone (opcional)"
+                    className={`w-full bg-card/40 border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors ${
+                      errors.telefone ? 'border-destructive focus:ring-destructive/50' : 'border-border focus:ring-primary/50'
+                    }`}
+                  />
+                  {errors.telefone && <p className="text-xs text-destructive pl-1 flex items-center gap-1"><span>⚠</span>{errors.telefone}</p>}
+                </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground pl-1">Plano de Subscrição</label>
                   <select value={planoId} onChange={e => setPlanoId(e.target.value)}
@@ -310,7 +386,7 @@ export default function Membros() {
                     ))}
                   </select>
                 </div>
-                <button onClick={handleSave} disabled={!nome.trim() || saveMutation.isPending}
+                <button onClick={handleSave} disabled={saveMutation.isPending}
                   className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:pointer-events-none">
                   {saveMutation.isPending ? 'A guardar...' : (editingMembro ? 'Guardar Alterações' : 'Criar Membro')}
                 </button>
@@ -370,6 +446,9 @@ export default function Membros() {
                     plano={plano}
                     onConfirmarPagamento={handleConfirmarPagamento}
                     onConfirmarInscricao={handleConfirmarInscricao}
+                    onEdit={() => handleEdit(membro)}
+                    onDelete={() => setDeleteId(membro.id)}
+                    onViewDetails={() => setDetailMembroId(membro.id)}
                     index={index}
                   />
                 );
@@ -429,6 +508,13 @@ export default function Membros() {
                       ) : (
                         <span className="text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full">Sem plano</span>
                       )}
+                      <button
+                        onClick={() => setDetailMembroId(membro.id)}
+                        className="p-2 hover:bg-muted/50 rounded-md transition-colors text-muted-foreground hover:text-foreground"
+                        title="Ver ficha completa"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button className="p-2 hover:bg-muted/50 rounded-md transition-colors text-muted-foreground hover:text-foreground">
@@ -452,6 +538,23 @@ export default function Membros() {
           )}
         </>
       )}
+
+      {/* Member Detail Panel */}
+      {(() => {
+        const detailMembro = detailMembroId ? membros.find(m => m.id === detailMembroId) ?? null : null;
+        const detailInscricao = detailMembroId ? inscricoes.find(i => i.membro_id === detailMembroId) ?? null : null;
+        const detailPlano = detailInscricao ? planos.find(p => p.id === detailInscricao.plano_id) ?? null : null;
+        return (
+          <MemberDetailPanel
+            open={!!detailMembroId}
+            onClose={() => setDetailMembroId(null)}
+            membro={detailMembro}
+            inscricao={detailInscricao}
+            plano={detailPlano}
+            historico={historico}
+          />
+        );
+      })()}
 
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent className="glass-surface border-border">

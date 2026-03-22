@@ -46,6 +46,40 @@ export default function Planos() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [viewingPlanId, setViewingPlanId] = useState<string | null>(null);
 
+  // --- Validation errors ---
+  const [errors, setErrors] = useState<{ nome?: string; preco?: string; taxaInscricao?: string; multaAtraso?: string }>({});
+
+  const validateFormPlano = (): boolean => {
+    const newErrors: typeof errors = {};
+    if (!nome.trim()) {
+      newErrors.nome = 'O nome do plano é obrigatório.';
+    } else if (nome.trim().length < 2) {
+      newErrors.nome = 'O nome deve ter pelo menos 2 caracteres.';
+    } else if (nome.trim().length > 80) {
+      newErrors.nome = 'O nome não pode exceder 80 caracteres.';
+    }
+    if (!preco.trim()) {
+      newErrors.preco = 'O valor da mensalidade é obrigatório.';
+    } else {
+      const val = parsePrice(preco);
+      if (isNaN(val) || val <= 0) {
+        newErrors.preco = 'Introduz um valor válido maior que zero.';
+      } else if (val > 10_000_000) {
+        newErrors.preco = 'O valor parece demasiado elevado.';
+      }
+    }
+    if (taxaInscricao.trim()) {
+      const val = parsePrice(taxaInscricao);
+      if (isNaN(val) || val < 0) newErrors.taxaInscricao = 'Valor inválido.';
+    }
+    if (multaAtraso.trim()) {
+      const val = parsePrice(multaAtraso);
+      if (isNaN(val) || val < 0) newErrors.multaAtraso = 'Valor inválido.';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const getSubscribers = (planoId: string) => {
     return inscricoes
       .filter(i => i.plano_id === planoId)
@@ -64,6 +98,7 @@ export default function Planos() {
       setPreco('');
       setTaxaInscricao('');
       setMultaAtraso('');
+      setErrors({});
     }
   };
 
@@ -74,7 +109,16 @@ export default function Planos() {
       toast.success('Plano criado com sucesso!');
       handleOpenChange(false);
     },
-    onError: () => toast.error('Erro ao criar plano.'),
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('duplicate') || msg.includes('23505')) {
+        toast.error('Já existe um plano com esse nome.');
+      } else if (msg.includes('network') || msg.includes('fetch')) {
+        toast.error('Erro de ligação. Verifica a tua internet e tenta de novo.');
+      } else {
+        toast.error('Erro ao criar plano. Tenta novamente.');
+      }
+    },
   });
 
   const updateMutation = useMutation({
@@ -84,7 +128,14 @@ export default function Planos() {
       toast.success('Plano atualizado com sucesso!');
       handleOpenChange(false);
     },
-    onError: () => toast.error('Erro ao atualizar plano.'),
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('network') || msg.includes('fetch')) {
+        toast.error('Erro de ligação. Verifica a tua internet e tenta de novo.');
+      } else {
+        toast.error('Erro ao atualizar plano. Tenta novamente.');
+      }
+    },
   });
 
   const deleteMutation = useMutation({
@@ -94,8 +145,15 @@ export default function Planos() {
       toast.success('Plano eliminado com sucesso!');
       setDeleteId(null);
     },
-    onError: () => {
-      toast.error('Erro ao eliminar plano.');
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('foreign key') || msg.includes('23503')) {
+        toast.error('Não é possível eliminar: existem inscrições dependentes deste plano.');
+      } else if (msg.includes('network') || msg.includes('fetch')) {
+        toast.error('Erro de ligação. Verifica a tua internet e tenta de novo.');
+      } else {
+        toast.error('Erro ao eliminar plano. Tenta novamente.');
+      }
       setDeleteId(null);
     },
   });
@@ -109,14 +167,9 @@ export default function Planos() {
   };
 
   const handleSave = () => {
-    if (!nome.trim() || !preco) return;
+    if (!validateFormPlano()) return;
 
     const finalPrice = parsePrice(preco);
-    if (isNaN(finalPrice) || finalPrice <= 0) {
-      toast.error('Introduza um preço válido.');
-      return;
-    }
-
     const finalTaxa = taxaInscricao ? parsePrice(taxaInscricao) : 0;
     const finalMulta = multaAtraso ? parsePrice(multaAtraso) : 0;
 
@@ -141,6 +194,11 @@ export default function Planos() {
   };
 
   const handleDeleteClick = (id: string) => {
+    const totalInscritos = inscricoes.filter(i => i.plano_id === id).length;
+    if (totalInscritos > 0) {
+      toast.error(`Não podes eliminar este plano porque ainda tem ${totalInscritos} membro(s) ativos. Por favor, move-os para outro plano primeiro.`);
+      return;
+    }
     setDeleteId(id);
   };
 
@@ -172,23 +230,34 @@ export default function Planos() {
             <DialogHeader>
               <DialogTitle>{editingPlano ? 'Editar Plano' : 'Criar Plano'}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 mt-4">
-              <input
-                value={nome}
-                onChange={e => setNome(e.target.value)}
-                placeholder="Nome do plano (ex: Mensalidade Jiu-Jitsu)"
-                className="w-full bg-card/40 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-              />
-              <input
-                type="text"
-                value={preco}
-                onChange={e => {
-                  const val = e.target.value.replace(/[^0-9.,]/g, '');
-                  setPreco(val);
-                }}
-                placeholder="Mensalidade (Kz)"
-                className="w-full bg-card/40 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-              />
+            <div className="space-y-3 mt-4">
+              <div className="space-y-1">
+                <input
+                  value={nome}
+                  onChange={e => { setNome(e.target.value); if (errors.nome) setErrors(p => ({ ...p, nome: undefined })); }}
+                  placeholder="Nome do plano (ex: Mensalidade Jiu-Jitsu)"
+                  className={`w-full bg-card/40 border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors ${
+                    errors.nome ? 'border-destructive focus:ring-destructive/50' : 'border-border focus:ring-primary/50'
+                  }`}
+                />
+                {errors.nome && <p className="text-xs text-destructive pl-1 flex items-center gap-1"><span>⚠</span>{errors.nome}</p>}
+              </div>
+              <div className="space-y-1">
+                <input
+                  type="text"
+                  value={preco}
+                  onChange={e => {
+                    const val = e.target.value.replace(/[^0-9.,]/g, '');
+                    setPreco(val);
+                    if (errors.preco) setErrors(p => ({ ...p, preco: undefined }));
+                  }}
+                  placeholder="Mensalidade (Kz)"
+                  className={`w-full bg-card/40 border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors ${
+                    errors.preco ? 'border-destructive focus:ring-destructive/50' : 'border-border focus:ring-primary/50'
+                  }`}
+                />
+                {errors.preco && <p className="text-xs text-destructive pl-1 flex items-center gap-1"><span>⚠</span>{errors.preco}</p>}
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground pl-1">Taxa de Inscrição</label>
@@ -198,10 +267,14 @@ export default function Planos() {
                     onChange={e => {
                       const val = e.target.value.replace(/[^0-9.,]/g, '');
                       setTaxaInscricao(val);
+                      if (errors.taxaInscricao) setErrors(p => ({ ...p, taxaInscricao: undefined }));
                     }}
                     placeholder="Opcional (0 Kz)"
-                    className="w-full bg-card/40 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    className={`w-full bg-card/40 border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors ${
+                      errors.taxaInscricao ? 'border-destructive focus:ring-destructive/50' : 'border-border focus:ring-primary/50'
+                    }`}
                   />
+                  {errors.taxaInscricao && <p className="text-xs text-destructive pl-1">⚠ {errors.taxaInscricao}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground pl-1">Multa de Atraso</label>
@@ -211,10 +284,14 @@ export default function Planos() {
                     onChange={e => {
                       const val = e.target.value.replace(/[^0-9.,]/g, '');
                       setMultaAtraso(val);
+                      if (errors.multaAtraso) setErrors(p => ({ ...p, multaAtraso: undefined }));
                     }}
                     placeholder="Opcional (0 Kz)"
-                    className="w-full bg-card/40 border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    className={`w-full bg-card/40 border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors ${
+                      errors.multaAtraso ? 'border-destructive focus:ring-destructive/50' : 'border-border focus:ring-primary/50'
+                    }`}
                   />
+                  {errors.multaAtraso && <p className="text-xs text-destructive pl-1">⚠ {errors.multaAtraso}</p>}
                 </div>
               </div>
               <button
@@ -222,7 +299,7 @@ export default function Planos() {
                 disabled={createMutation.isPending || updateMutation.isPending}
                 className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:pointer-events-none"
               >
-                {editingPlano ? 'Guardar Alterações' : 'Criar Plano'}
+                {createMutation.isPending || updateMutation.isPending ? 'A guardar...' : (editingPlano ? 'Guardar Alterações' : 'Criar Plano')}
               </button>
             </div>
           </DialogContent>

@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Calendar, ChevronDown } from 'lucide-react';
+import { User, Calendar, ChevronDown, MoreVertical, Pencil, Trash2, ExternalLink } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { StatusBadge } from './StatusBadge';
 import { Membro, Inscricao, Plano, StatusPagamento } from '@/types';
 import { cn, getRealStatus } from '@/lib/utils';
@@ -11,6 +17,9 @@ interface MemberCardProps {
   plano: Plano;
   onConfirmarPagamento: (inscricaoId: string, meses: number, temMulta: boolean) => void;
   onConfirmarInscricao?: (inscricaoId: string) => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onViewDetails?: () => void;
   index: number;
 }
 
@@ -24,7 +33,7 @@ const glowMap: Record<StatusPagamento, string> = {
 
 const MESES_OPCOES = [1, 2, 3, 6, 12];
 
-export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, onConfirmarInscricao, index }: MemberCardProps) {
+export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, onConfirmarInscricao, onEdit, onDelete, onViewDetails, index }: MemberCardProps) {
   const [confirming, setConfirming] = useState(false);
   const [confirmingInscricao, setConfirmingInscricao] = useState(false);
   const [mesesSelecionados, setMesesSelecionados] = useState(1);
@@ -91,7 +100,24 @@ export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, onC
             <span className="text-[10px] text-muted-foreground uppercase font-mono mt-0.5">#{membro.id.substring(0, 5)}</span>
           </div>
         </div>
-        <StatusBadge status={confirming ? 'Ativo' : getRealStatus(inscricao)} />
+        <div className="flex items-center gap-2">
+          <StatusBadge status={confirming ? 'Ativo' : getRealStatus(inscricao)} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-1 -mr-2 hover:bg-muted/50 rounded-md transition-colors text-muted-foreground hover:text-foreground">
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40 border-border/50 bg-background/95 backdrop-blur-md">
+              <DropdownMenuItem onClick={onEdit} className="cursor-pointer gap-2">
+                <Pencil className="w-4 h-4" /><span>Editar</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onDelete} className="cursor-pointer gap-2 text-destructive focus:text-destructive">
+                <Trash2 className="w-4 h-4" /><span>Eliminar</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Body */}
@@ -243,6 +269,15 @@ export function MemberCard({ membro, inscricao, plano, onConfirmarPagamento, onC
           </div>
         )}
       </div>
+
+      {/* Ver detalhes */}
+      <button
+        onClick={onViewDetails}
+        className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 border border-transparent hover:border-border/50 transition-all mt-1"
+      >
+        <ExternalLink className="w-3 h-3" />
+        Ver Ficha Completa
+      </button>
     </motion.div>
   );
 }

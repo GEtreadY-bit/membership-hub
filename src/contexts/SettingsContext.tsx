@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'light' | 'dark' | 'system';
+type Theme = 'light' | 'dark';
 type BillingMode = 'relative' | 'first_of_month';
 
 interface SettingsState {
@@ -20,9 +20,12 @@ interface SettingsContextType extends SettingsState {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem('nexus_theme') as Theme) || 'dark'
-  );
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = localStorage.getItem('nexus_theme') as Theme | null;
+    // Fallback if 'system' was previously saved
+    if (!saved || saved === ('system' as string)) return 'dark';
+    return saved;
+  });
   
   const [billingMode, setBillingMode] = useState<BillingMode>(
     () => (localStorage.getItem('nexus_billing_mode') as BillingMode) || 'relative'
@@ -39,14 +42,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
-
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      root.classList.add(systemTheme);
-    } else {
-      root.classList.add(theme);
-    }
-
+    root.classList.add(theme);
     localStorage.setItem('nexus_theme', theme);
   }, [theme]);
 

@@ -1,12 +1,20 @@
 import { useSettings } from '@/contexts/SettingsContext';
 import { motion } from 'framer-motion';
-import { Monitor, Moon, Sun, Calendar, Clock, Bell, AlertTriangle } from 'lucide-react';
+import { Moon, Sun, Calendar, Clock, Bell, AlertTriangle, FileText, FileSpreadsheet, Download } from 'lucide-react';
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getMembros, getInscricoes, getPlanos, getHistorico } from '@/lib/api';
+import { exportMembrosCSV, exportMembrosXLSX, exportHistoricoCSV, exportHistoricoXLSX } from '@/lib/export';
 
 export default function Definicoes() {
   const { theme, setTheme, billingMode, setBillingMode, gracePeriodDays, setGracePeriodDays, warningDays, setWarningDays } = useSettings();
 
-  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
+  const { data: membros = [] } = useQuery({ queryKey: ['membros'], queryFn: getMembros });
+  const { data: inscricoes = [] } = useQuery({ queryKey: ['inscricoes'], queryFn: getInscricoes });
+  const { data: planos = [] } = useQuery({ queryKey: ['planos'], queryFn: getPlanos });
+  const { data: historico = [] } = useQuery({ queryKey: ['historico'], queryFn: getHistorico });
+
+  const handleThemeChange = (newTheme: 'light' | 'dark') => {
     setTheme(newTheme);
   };
 
@@ -29,7 +37,7 @@ export default function Definicoes() {
             <p className="text-sm text-muted-foreground">Escolhe o tema da aplicação.</p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => handleThemeChange('light')}
               className={`flex flex-col items-center justify-center gap-3 py-6 px-4 rounded-xl border transition-colors ${
@@ -47,15 +55,6 @@ export default function Definicoes() {
             >
               <Moon className="w-6 h-6" />
               <span className="font-medium text-sm">Escuro</span>
-            </button>
-            <button
-              onClick={() => handleThemeChange('system')}
-              className={`flex flex-col items-center justify-center gap-3 py-6 px-4 rounded-xl border transition-colors ${
-                theme === 'system' ? 'bg-primary/10 border-primary text-primary' : 'bg-card/40 border-border text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Monitor className="w-6 h-6" />
-              <span className="font-medium text-sm">Sistema</span>
             </button>
           </div>
         </section>
@@ -164,6 +163,87 @@ export default function Definicoes() {
                   className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" 
                 />
                 <span className="text-sm font-medium w-16 text-right tabular-nums">{gracePeriodDays} dias</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Export Section */}
+        <section className="glass-surface-inner p-6 rounded-2xl flex flex-col gap-5">
+          <div>
+            <h2 className="text-lg font-medium text-foreground flex items-center gap-2">
+              <Download className="w-5 h-5 text-primary" />
+              Exportar Dados
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Faz o backup dos teus dados em CSV ou Excel. Nenhum dado é eliminado.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Membros card */}
+            <div className="flex flex-col gap-3 p-4 rounded-xl border border-border bg-card/40">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <FileText className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Membros</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {membros.length} membro{membros.length !== 1 ? 's' : ''} — nome, contacto, plano e estado
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => exportMembrosCSV(membros, inscricoes, planos)}
+                  disabled={membros.length === 0}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-border bg-card/60 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  CSV
+                </button>
+                <button
+                  onClick={() => exportMembrosXLSX(membros, inscricoes, planos)}
+                  disabled={membros.length === 0}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-border bg-card/60 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-green-500" />
+                  Excel
+                </button>
+              </div>
+            </div>
+
+            {/* Histórico card */}
+            <div className="flex flex-col gap-3 p-4 rounded-xl border border-border bg-card/40">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <FileSpreadsheet className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Histórico de Pagamentos</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {historico.length} registo{historico.length !== 1 ? 's' : ''} — membro, tipo, valor e data
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => exportHistoricoCSV(historico, membros)}
+                  disabled={historico.length === 0}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-border bg-card/60 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  CSV
+                </button>
+                <button
+                  onClick={() => exportHistoricoXLSX(historico, membros)}
+                  disabled={historico.length === 0}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-border bg-card/60 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-green-500" />
+                  Excel
+                </button>
               </div>
             </div>
           </div>
