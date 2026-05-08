@@ -14,6 +14,22 @@ function formatDate(dateStr: string): string {
   });
 }
 
+/**
+ * Sanitizes a value for export to CSV/XLSX to prevent Formula Injection (CSV Injection).
+ * If a string starts with =, +, -, @, \t, or \r, it prepends a single quote.
+ */
+export function sanitizeForExport(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  if (value.length === 0) return value;
+
+  const triggerChars = ['=', '+', '-', '@', '\t', '\r'];
+  if (triggerChars.some(char => value.startsWith(char))) {
+    return `'${value}`;
+  }
+
+  return value;
+}
+
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -25,11 +41,12 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function toCSVString(rows: string[][]): string {
+function toCSVString(rows: unknown[][]): string {
   return rows
     .map(row =>
       row.map(cell => {
-        const str = String(cell ?? '');
+        const sanitized = sanitizeForExport(cell);
+        const str = String(sanitized ?? '');
         // Wrap in quotes if contains comma, quote, or newline
         if (str.includes(',') || str.includes('"') || str.includes('\n')) {
           return `"${str.replace(/"/g, '""')}"`;
@@ -75,7 +92,7 @@ export function exportHistoricoXLSX(
   historico: HistoricoPagamento[],
   membros: Membro[]
 ) {
-  const header = ['ID', 'Membro', 'Tipo', 'Valor (Kz)', 'Data Pagamento'];
+  const header = ['ID', 'Membro', 'Tipo', 'Valor (Kz)', 'Data Pagamento'].map(sanitizeForExport);
 
   const rows = historico.map(h => {
     const membro = membros.find(m => m.id === h.membro_id);
@@ -85,7 +102,7 @@ export function exportHistoricoXLSX(
       h.tipo ?? 'Mensalidade',
       h.valor,
       formatDate(h.data_pagamento),
-    ];
+    ].map(sanitizeForExport);
   });
 
   const wb = XLSX.utils.book_new();
@@ -150,7 +167,7 @@ export function exportMembrosXLSX(
   inscricoes: Inscricao[],
   planos: Plano[]
 ) {
-  const header = ['ID', 'Nome', 'Email', 'Telefone', 'Plano', 'Status', 'Próximo Pagamento', 'Data Registo'];
+  const header = ['ID', 'Nome', 'Email', 'Telefone', 'Plano', 'Status', 'Próximo Pagamento', 'Data Registo'].map(sanitizeForExport);
 
   const rows = membros.map(m => {
     const inscricao = inscricoes.find(i => i.membro_id === m.id);
@@ -167,7 +184,7 @@ export function exportMembrosXLSX(
       status,
       proximoPagamento,
       formatDate(m.created_at),
-    ];
+    ].map(sanitizeForExport);
   });
 
   const wb = XLSX.utils.book_new();
